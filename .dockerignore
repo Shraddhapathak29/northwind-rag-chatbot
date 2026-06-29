@@ -1,0 +1,16 @@
+# Root build context for the backend image is the repo root (so it can copy data/).
+# Exclude everything the API image does not need to keep the context small/fast.
+.git
+.gitignore
+.gitattributes
+frontend
+dataset_raw
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.venv
+**/venv
+.env
+*.env
+!.env.example
+README.md

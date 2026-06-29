@@ -1,0 +1,22 @@
+# Normalise line endings. Critical on Windows: the backend entrypoint runs as a
+# bash script inside a Linux container, so it MUST stay LF even when the repo is
+# checked out on Windows (otherwise Docker fails with "no such file" / \r errors).
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.py   text eol=lf
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.md   text eol=lf
+Dockerfile text eol=lf
+Makefile   text eol=lf
+
+# Binaries
+*.pdf binary
+*.png binary
+*.jpg binary
+*.ico binary

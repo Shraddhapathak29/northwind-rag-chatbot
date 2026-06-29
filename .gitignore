@@ -1,0 +1,23 @@
+# secrets / env
+.env
+*.env
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# node / next
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# raw download scratch (the curated copy lives in data/)
+dataset_raw/
+
+# os
+.DS_Store
