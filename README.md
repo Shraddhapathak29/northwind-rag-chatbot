@@ -11,21 +11,9 @@ The agent routes each question to the right tool — or **both** for mixed quest
 and returns a safe fallback (`"I don't have that information."`) for out-of-scope queries.
 
 > Built for the EMB **AI Engineer** technical assessment.
-> Business "today" is fixed to **15 June 2026** for deterministic time-based answers.
 
----
 
-## 1. Live demo & repo
-
-| | |
-|---|---|
-| **Live URL** | _add after deploy_ (e.g. `https://northwind-web.onrender.com`) |
-| **API URL** | _add after deploy_ (e.g. `https://northwind-api.onrender.com/health`) |
-| **Repo** | _your public GitHub URL_ |
-
----
-
-## 2. Architecture
+## 1. Architecture
 
 ```
 ┌──────────────┐   POST /chat/stream (SSE, token-level)   ┌─────────────────────────────────┐
@@ -66,7 +54,7 @@ and returns a safe fallback (`"I don't have that information."`) for out-of-scop
 
 ---
 
-## 3. Tech stack & why
+## 2. Tech stack & why
 
 | Layer | Choice | Reasoning |
 |------|--------|-----------|
@@ -84,7 +72,7 @@ and returns a safe fallback (`"I don't have that information."`) for out-of-scop
 
 ---
 
-## 4. Dataset — what it is and how each file is used
+## 3. Dataset — what it is and how each file is used
 
 All files come from the provided Google Drive folder and live under [`data/`](data/).
 
@@ -125,7 +113,7 @@ similarity (`embedding <=> query`), top-`k=4`, returning `source` + `section` as
 
 ---
 
-## 5. How routing works
+## 4. How routing works
 
 Routing is an **LLM JSON decision**, not brittle keyword rules. The router prompt
 ([`backend/app/agent/prompts.py`](backend/app/agent/prompts.py)) describes each tool's
@@ -144,7 +132,7 @@ report SQL numbers exactly, and never invent policy text, rows, or columns.
 
 ---
 
-## 6. Text-to-SQL safety (defence in depth)
+## 5. Text-to-SQL safety (defence in depth)
 
 Generated SQL passes through [`app/sql/guard.py`](backend/app/sql/guard.py) before it runs:
 1. Strip markdown fences / trailing `;`.
@@ -157,7 +145,7 @@ Generated SQL passes through [`app/sql/guard.py`](backend/app/sql/guard.py) befo
 
 ---
 
-## 7. Project structure (file guide)
+## 6. Project structure (file guide)
 
 ```
 emb_assessment/
@@ -185,10 +173,10 @@ emb_assessment/
 
 ---
 
-## 8. Run locally (Docker — recommended)
+## 7. Run locally (Docker — recommended)
 
 ```bash
-cp .env.example .env          # then put your Hugging Face token (hf_...) in OPENAI_API_KEY
+cp .env         
 docker compose up --build
 ```
 
@@ -201,69 +189,3 @@ docker compose up --build
 
 On first boot the API waits for Postgres, then **ingests** (loads 200 orders, embeds 27
 chunks) automatically. Re-ingest anytime with `make ingest` (or `FORCE_INGEST=1`).
-
-### Run without Docker (dev)
-```bash
-# Postgres with pgvector must be reachable via DATABASE_URL
-cd backend && pip install -r requirements.txt
-export OPENAI_API_KEY=sk-... DATABASE_URL=postgresql://postgres:postgres@localhost:5432/northwind
-python -m app.ingest.run_all ../data/documents ../data/orders.csv
-uvicorn app.main:app --reload
-# in another shell:
-cd frontend && npm install && NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev
-```
-
-### Tests
-```bash
-make test     # 11 unit tests for the chunker + SQL guard (no DB / no API key)
-```
-
----
-
-## 9. Deploy to Render
-
-1. Push this repo to **public GitHub**.
-2. Render → **New → Blueprint** → pick the repo (`render.yaml` is auto-detected).
-3. It provisions: `northwind-db` (Postgres+pgvector), `northwind-api`, `northwind-web`.
-4. On `northwind-api`, set **`OPENAI_API_KEY`** to your **Hugging Face token** (`hf_...`).
-   (The other LLM/embedding vars are pre-set in `render.yaml`; embeddings run locally.)
-5. On `northwind-web`, set **`NEXT_PUBLIC_API_BASE`** = the API's public URL
-   (e.g. `https://northwind-api.onrender.com`) and redeploy (it's baked into the bundle).
-6. Open the `northwind-web` URL → that's your **live URL**.
-
----
-
-## 10. Known limitations
-
-- **Single-table SQL.** The schema is one `orders` table; multi-table joins aren't needed
-  and aren't supported by design.
-- **Free-tier cold starts.** Render free services sleep when idle; first request after
-  idle is slow (and Postgres free expires after ~90 days).
-- **No conversation memory.** Each question is answered independently (no multi-turn
-  follow-up context) — keeps routing deterministic for grading. Easy to add.
-- **Single-round tool calling.** The agent picks its tool(s) in one routing step
-  (mixed questions use *parallel* calls). It does not chain tools across rounds
-  (RAG → then SQL based on RAG output); not needed for this dataset.
-- **Tiny corpus, IVFFlat index.** With 27 chunks an index is unnecessary; it's included to
-  show the production-correct pattern, not for speed.
-- **Fixed business date.** Time math uses 15 Jun 2026 (per the brief), not the real clock.
-- **Hosted LLM availability.** The chat model is a hosted open-source endpoint (HF
-  Inference Providers); under provider load it can return a transient 503, which the
-  client retries with backoff. Embeddings are local and unaffected.
-- **Bulk-discount math** lives in policy text only; the agent quotes the rule rather than
-  recomputing discounted prices unless asked to via SQL.
-
----
-
-## 11. Example questions to try
-
-| Question | Expected |
-|---|---|
-| What is the refund window? | RAG · `[returns_policy.pdf]` · 30 days |
-| How long is the warranty on accessories? | RAG · `[warranty_policy.pdf]` · 6 months |
-| How many orders are pending? | SQL · `24` |
-| What was total revenue last month? | SQL · May 2026 · ₹2,88,332 |
-| Our policy allows 30-day returns; did order ORD-1207 qualify? | **both** tools |
-| How many annual leave days do employees get? | RAG · `[hr_leave_policy.pdf]` · 18 |
-| What's the capital of France? | `"I don't have that information."` |
-```
